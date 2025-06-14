@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>☯ Jonas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: #f5f4f0;
+      color: #2e2e2e;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    header {
+      padding: 0.75rem 1rem;
+      text-align: center;
+      background-color: #e4e1d5;
+      border-bottom: 1px solid #c8c3b3;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #3a3a3a;
+    }
+
+    .container {
+      display: flex;
+      height: calc(100vh - 48px);
+    }
+
+    .sidebar {
+      width: 220px;
+      background-color: #f0ede7;
+      border-right: 1px solid #d3cdbc;
+      padding: 0.75rem;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .sidebar li {
+      margin: 0.6rem 0;
+    }
+
+    .sidebar a {
+      color: #5c5c5c;
+      text-decoration: none;
+      font-weight: 400;
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .sidebar a:hover {
+      color: #000;
+    }
+
+    .sidebar a.active {
+      font-weight: 600;
+      color: #000;
+    }
+
+    main {
+      flex: 1;
+      padding: 1rem 1.25rem;
+      overflow-y: auto;
+      box-sizing: border-box;
+      background-color: #fcfbf8;
+    }
+
+    main h1, main h2, main h3 {
+      font-weight: 600;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    main p {
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>☯ Jonas</h1>
+  </header>
+
+  <div class="container">
+    <aside class="sidebar">
+      <ul id="sidebar-list">
+        <li>
+          <a href="#" id="link-accueil" class="active">Accueil</a>
+        </li>
+        <!-- Articles dynamiquement ajoutés ici -->
+      </ul>
+    </aside>
+
+    <main id="article-container">
+      <!-- Contenu d’accueil chargé dynamiquement -->
+    </main>
+  </div>
+
+  <script>
+    function setActiveLink(fileName) {
+      document.querySelectorAll('.sidebar a').forEach(link => {
+        if (fileName === null && link.id === 'link-accueil') {
+          link.classList.add('active');
+        } else {
+          link.classList.toggle('active', link.dataset.file === fileName);
+        }
+      });
+    }
+
+    function replaceMainWithContent(html) {
+      const main = document.createElement('main');
+      main.id = 'article-container';
+      main.innerHTML = html;
+      document.querySelector('.container main').replaceWith(main);
+    }
+
+    function loadAccueil() {
+      fetch('articles/accueil.html')
+        .then(res => {
+          if (!res.ok) throw new Error('Erreur chargement accueil');
+          return res.text();
+        })
+        .then(html => {
+          replaceMainWithContent(html);
+          setActiveLink(null);
+        })
+        .catch(() => {
+          replaceMainWithContent("<p>Erreur de chargement de la page d'accueil.</p>");
+          setActiveLink(null);
+        });
+    }
+
+    function loadArticle(path, fileName = null) {
+      fetch(path)
+        .then(res => res.text())
+        .then(md => {
+          replaceMainWithContent(marked.parse(md));
+          setActiveLink(fileName);
+        })
+        .catch(() => {
+          replaceMainWithContent("<p>Erreur de chargement de l'article.</p>");
+          setActiveLink(null);
+        });
+    }
+
+    function loadSidebar() {
+      fetch('articles/index.json')
+        .then(res => res.json())
+        .then(articles => {
+          const ul = document.getElementById('sidebar-list');
+          articles.forEach(article => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = '#';
+            a.textContent = article.title;
+            a.dataset.file = article.file;
+            a.onclick = () => loadArticle('articles/' + article.file, article.file);
+            li.appendChild(a);
+            ul.appendChild(li);
+          });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSidebar();
+      document.getElementById('link-accueil').onclick = (e) => {
+        e.preventDefault();
+        loadAccueil();
+      };
+      loadAccueil(); // Charger accueil par défaut
+    });
+  </script>
+</body>
+</html>
