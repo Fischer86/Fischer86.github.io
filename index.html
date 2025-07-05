@@ -14,13 +14,16 @@
       font-family: 'Inter', sans-serif;
       font-size: 0.92rem;
       line-height: 1.5;
+      overflow-x: hidden;
     }
 
     header {
       padding: 0.75rem 1rem;
-      text-align: center;
       background-color: #e4e1d5;
       border-bottom: 1px solid #c8c3b3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     header h1 {
@@ -31,9 +34,26 @@
       color: #3a3a3a;
     }
 
+    /* Bouton hamburger */
+    #menu-toggle {
+      display: none;
+      flex-direction: column;
+      cursor: pointer;
+      width: 24px;
+      height: 18px;
+      justify-content: space-between;
+    }
+    #menu-toggle span {
+      display: block;
+      height: 3px;
+      background-color: #3a3a3a;
+      border-radius: 2px;
+    }
+
     .container {
       display: flex;
       height: calc(100vh - 48px);
+      transition: margin-left 0.3s ease;
     }
 
     .sidebar {
@@ -43,6 +63,7 @@
       padding: 0.75rem;
       box-sizing: border-box;
       overflow-y: auto;
+      transition: transform 0.3s ease;
     }
 
     .sidebar ul {
@@ -62,15 +83,21 @@
       font-size: 0.9rem;
       cursor: pointer;
       user-select: none;
+      display: block;
+      padding: 4px 6px;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
     }
 
     .sidebar a:hover {
       color: #000;
+      background-color: #ddd9cc;
     }
 
     .sidebar a.active {
       font-weight: 600;
       color: #000;
+      background-color: #c8c3b3;
     }
 
     main {
@@ -79,6 +106,7 @@
       overflow-y: auto;
       box-sizing: border-box;
       background-color: #fcfbf8;
+      min-width: 0;
     }
 
     main h1, main h2, main h3 {
@@ -90,20 +118,64 @@
     main p {
       margin: 0.5rem 0;
     }
+
+    /* Responsive & menu pliable */
+
+    @media (max-width: 768px) {
+      #menu-toggle {
+        display: flex;
+      }
+
+      .container {
+        flex-direction: column;
+        height: auto;
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 48px;
+        left: 0;
+        height: calc(100vh - 48px);
+        width: 220px;
+        background-color: #f0ede7;
+        border-right: 1px solid #d3cdbc;
+        padding: 1rem;
+        transform: translateX(-100%);
+        z-index: 1000;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      main {
+        padding: 1rem;
+      }
+
+      body.menu-open {
+        overflow: hidden;
+      }
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>☯ Jonas</h1>
+    <div id="menu-toggle" aria-label="Toggle menu" role="button" tabindex="0">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
   </header>
 
   <div class="container">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <ul id="sidebar-list">
         <li>
           <a href="#" id="link-accueil" class="active">Accueil</a>
         </li>
-        <!-- Article dynamiquement ajouté ici -->
+        <!-- Articles ajoutés dynamiquement ici -->
       </ul>
     </aside>
 
@@ -113,6 +185,24 @@
   </div>
 
   <script>
+    // Gestion menu responsive
+    const menuToggle = document.getElementById('menu-toggle');
+    const sidebar = document.getElementById('sidebar');
+
+    function toggleMenu() {
+      sidebar.classList.toggle('open');
+      document.body.classList.toggle('menu-open');
+    }
+
+    menuToggle.addEventListener('click', toggleMenu);
+    menuToggle.addEventListener('keydown', e => {
+      if(e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleMenu();
+      }
+    });
+
+    // Activation lien dans sidebar
     function setActiveLink(fileName) {
       document.querySelectorAll('.sidebar a').forEach(link => {
         if (fileName === null && link.id === 'link-accueil') {
@@ -121,8 +211,14 @@
           link.classList.toggle('active', link.dataset.file === fileName);
         }
       });
+      // Fermer menu sur mobile après clic
+      if(window.innerWidth <= 768) {
+        sidebar.classList.remove('open');
+        document.body.classList.remove('menu-open');
+      }
     }
 
+    // Remplacer contenu principal
     function replaceMainWithContent(html) {
       const main = document.createElement('main');
       main.id = 'article-container';
@@ -130,6 +226,7 @@
       document.querySelector('.container main').replaceWith(main);
     }
 
+    // Charger page d'accueil (articles/accueil.html)
     function loadAccueil() {
       fetch('articles/accueil.html')
         .then(res => {
@@ -146,9 +243,13 @@
         });
     }
 
+    // Charger un article markdown
     function loadArticle(path, fileName = null) {
       fetch(path)
-        .then(res => res.text())
+        .then(res => {
+          if (!res.ok) throw new Error('Erreur chargement article');
+          return res.text();
+        })
         .then(md => {
           replaceMainWithContent(marked.parse(md));
           setActiveLink(fileName);
@@ -159,9 +260,13 @@
         });
     }
 
+    // Charger la sidebar avec index.json
     function loadSidebar() {
       fetch('articles/index.json')
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error('Erreur chargement index.json');
+          return res.json();
+        })
         .then(articles => {
           const ul = document.getElementById('sidebar-list');
           articles.forEach(article => {
@@ -174,12 +279,16 @@
             li.appendChild(a);
             ul.appendChild(li);
           });
+        })
+        .catch(() => {
+          console.error('Erreur chargement index.json');
         });
     }
 
+    // Initialisation
     document.addEventListener('DOMContentLoaded', () => {
       loadSidebar();
-      document.getElementById('link-accueil').onclick = (e) => {
+      document.getElementById('link-accueil').onclick = e => {
         e.preventDefault();
         loadAccueil();
       };
