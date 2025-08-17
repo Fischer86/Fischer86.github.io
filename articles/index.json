@@ -3,5 +3,11 @@
         "title" : "Wu Wei, ou l'art de ne pas forcer", 
         "tags" : ["philosophie", "taoïsme", "zen"], 
         "date" : "28-05-2025"
-    }
+    },
+     {
+        "file" : "tao-te-king-1.md",
+        "title" : "Tao Te King - Chapitre 1",
+        "tags" : ["philosophie", "taoïsme", "textes anciens"],
+        "date" : "05-07-2025"
+     }
 ]
